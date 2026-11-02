@@ -1,7 +1,24 @@
 const Database = require('better-sqlite3');
 const path = require('path');
+const fs = require('fs');
 
-const dbPath = path.join(__dirname, 'paytrack.db');
+const isVercel = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+let dbPath = path.join(__dirname, 'paytrack.db');
+
+if (isVercel) {
+  const tmpPath = path.join('/tmp', 'paytrack.db');
+  if (!fs.existsSync(tmpPath)) {
+    try {
+      if (fs.existsSync(dbPath)) {
+        fs.copyFileSync(dbPath, tmpPath);
+      }
+    } catch (e) {
+      console.warn('Could not copy db to /tmp:', e);
+    }
+  }
+  dbPath = tmpPath;
+}
+
 const db = new Database(dbPath);
 
 // Enable foreign keys and WAL mode for high concurrency

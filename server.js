@@ -873,9 +873,13 @@ app.use((err, req, res, next) => {
   res.status(500).json({ success: false, message: 'Internal Server Error', error: err.message });
 });
 
-app.listen(PORT, () => {
-  console.log(`====================================================`);
-  console.log(`  🚀 Paytrack Full-Stack Server running at:`);
-  console.log(`     http://localhost:${PORT}`);
-  console.log(`====================================================`);
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`====================================================`);
+    console.log(`  🚀 Paytrack Full-Stack Server running at:`);
+    console.log(`     http://localhost:${PORT}`);
+    console.log(`====================================================`);
+  });
+}
+
+module.exports = app;
