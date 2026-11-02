@@ -1,0 +1,1319 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Paytrack — Salary Management</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --ink:#161f38;
+  --ink-2:#212c4d;
+  --ink-soft:#5b6584;
+  --paper:#f6f3ea;
+  --paper-dim:#efeade;
+  --paper-raised:#ffffff;
+  --line:#e2dcc8;
+  --line-strong:#cfc6a9;
+  --accent:#1f6f5c;
+  --accent-2:#154b3e;
+  --accent-soft:#e4efe9;
+  --gold:#b8863b;
+  --gold-soft:#f5ecdb;
+  --rust:#a1442f;
+  --rust-soft:#f3e5e0;
+  --mono:'IBM Plex Mono', 'SFMono-Regular', Menlo, monospace;
+  --sans:'IBM Plex Sans', 'Segoe UI', sans-serif;
+  --serif:'Source Serif 4', Georgia, serif;
+  --shadow-sm:0 1px 2px rgba(22,31,56,0.06);
+  --shadow-md:0 6px 20px -4px rgba(22,31,56,0.14);
+  --shadow-lg:0 20px 60px -12px rgba(22,31,56,0.35);
+  --ease:cubic-bezier(.4,0,.2,1);
+}
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600;8..60,700&display=swap');
+
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:var(--sans);
+  background:var(--paper);
+  color:var(--ink);
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+}
+::selection{background:var(--accent-soft); color:var(--accent-2);}
+:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+* { scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
+::-webkit-scrollbar{height:8px; width:8px;}
+::-webkit-scrollbar-thumb{background:var(--line-strong); border-radius:8px;}
+::-webkit-scrollbar-track{background:transparent;}
+
+@keyframes fadeUp{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
+@keyframes fadeIn{ from{opacity:0;} to{opacity:1;} }
+@media (prefers-reduced-motion: reduce){
+  *{animation-duration:0.001ms !important; transition-duration:0.001ms !important;}
+}
+
+/* ---------- Login ---------- */
+#loginScreen{
+  min-height:100vh;
+  display:grid;
+  grid-template-columns:1.15fr 1fr;
+  background:var(--paper);
+}
+.login-hero{
+  position:relative;
+  background:
+    radial-gradient(1100px 480px at 12% -10%, #223357 0%, transparent 60%),
+    linear-gradient(160deg, var(--ink) 0%, #0f1730 100%);
+  color:#e9ecf6;
+  padding:56px 56px;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  overflow:hidden;
+}
+.login-hero::after{
+  content:"";
+  position:absolute; inset:0;
+  background-image:
+    repeating-linear-gradient(90deg, rgba(255,255,255,0.035) 0 1px, transparent 1px 64px),
+    repeating-linear-gradient(0deg, rgba(255,255,255,0.035) 0 1px, transparent 1px 64px);
+  pointer-events:none;
+}
+.hero-top{position:relative; z-index:1;}
+.hero-mark{
+  display:inline-flex; align-items:center; gap:10px;
+  font-family:var(--serif); font-weight:700; font-size:22px; color:#fff;
+  letter-spacing:0.01em;
+}
+.hero-mark svg{flex:none;}
+.hero-tagline{
+  font-family:var(--serif); font-weight:600; font-size:clamp(28px,3.4vw,40px);
+  line-height:1.18; max-width:11ch; margin:38px 0 0; color:#fff;
+}
+.hero-tagline em{color:#7fd4b8; font-style:normal;}
+
+.ledger-tape{
+  position:relative; z-index:1;
+  margin-top:40px;
+  background:rgba(255,255,255,0.045);
+  border:1px solid rgba(255,255,255,0.14);
+  border-radius:6px;
+  padding:18px 20px;
+  font-family:var(--mono); font-size:13.5px;
+  backdrop-filter:blur(2px);
+}
+.ledger-tape .lt-label{
+  font-size:10px; letter-spacing:0.14em; text-transform:uppercase; color:#8b96bf; margin-bottom:12px;
+}
+.lt-row{
+  display:flex; justify-content:space-between; padding:5px 0; color:#c7cde3;
+  opacity:0; animation:fadeUp .5s var(--ease) forwards;
+  border-bottom:1px dashed rgba(255,255,255,0.1);
+}
+.lt-row:last-child{border-bottom:none;}
+.lt-row.total{
+  border-top:1px solid rgba(255,255,255,0.35); border-bottom:none; margin-top:6px; padding-top:10px;
+  color:#fff; font-weight:700; font-size:15px;
+}
+.lt-row span:last-child{font-variant-numeric:tabular-nums;}
+.lt-row .plus{color:#7fd4b8;}
+.lt-row .minus{color:#e39a8a;}
+
+.hero-foot{position:relative; z-index:1; font-family:var(--mono); font-size:11px; color:#78829f; line-height:1.7;}
+
+.login-panel{
+  display:flex; align-items:center; justify-content:center; padding:32px;
+}
+.login-card{
+  width:100%;
+  max-width:380px;
+  background:var(--paper-raised);
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:40px 38px 34px;
+  position:relative;
+  box-shadow:var(--shadow-lg);
+  animation:fadeUp .5s var(--ease);
+}
+.brand{
+  font-family:var(--serif);
+  font-weight:700;
+  font-size:24px;
+  letter-spacing:0.01em;
+  color:var(--ink);
+  margin:0 0 2px;
+}
+.brand-sub{
+  font-family:var(--mono);
+  font-size:10.5px;
+  letter-spacing:0.12em;
+  text-transform:uppercase;
+  color:var(--ink-soft);
+  margin:0 0 30px;
+}
+.login-panel .brand{display:none;}
+.field{margin-bottom:16px;}
+.field label{
+  display:block;
+  font-size:10.5px;
+  font-family:var(--mono);
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  color:var(--ink-soft);
+  margin-bottom:7px;
+}
+.field input{
+  width:100%;
+  padding:11px 13px;
+  border:1.5px solid var(--line);
+  border-radius:6px;
+  font-family:var(--sans);
+  font-size:14px;
+  background:var(--paper);
+  color:var(--ink);
+  transition:border-color .15s var(--ease), box-shadow .15s var(--ease), background .15s var(--ease);
+}
+.field input:hover{border-color:var(--line-strong);}
+.field input:focus{outline:none; border-color:var(--accent); background:#fff; box-shadow:0 0 0 3px var(--accent-soft);}
+.btn{
+  appearance:none;
+  border:none;
+  cursor:pointer;
+  font-family:var(--sans);
+  font-weight:600;
+  font-size:13.5px;
+  border-radius:6px;
+  padding:11px 20px;
+  transition:transform .12s var(--ease), box-shadow .15s var(--ease), background .15s var(--ease), border-color .15s var(--ease), color .15s var(--ease);
+  box-shadow:var(--shadow-sm);
+}
+.btn:active{transform:translateY(1px) scale(.99); box-shadow:none;}
+.btn-primary{background:var(--ink); color:#fff;}
+.btn-primary:hover{background:#0d1730; box-shadow:var(--shadow-md);}
+.btn-block{width:100%;}
+.login-hint{
+  margin-top:20px;
+  font-size:11.5px;
+  color:var(--ink-soft);
+  font-family:var(--mono);
+  line-height:1.7;
+  border-top:1px dashed var(--line);
+  padding-top:16px;
+}
+.login-error{
+  color:var(--rust);
+  background:var(--rust-soft);
+  border:1px solid #e6c9c1;
+  border-radius:6px;
+  padding:9px 12px;
+  font-size:12.5px;
+  margin:0 0 16px;
+  display:none;
+  animation:fadeUp .25s var(--ease);
+}
+
+/* ---------- App shell ---------- */
+#app{display:none; min-height:100vh;}
+.shell{display:grid; grid-template-columns:236px 1fr; min-height:100vh;}
+.sidebar{
+  background:linear-gradient(185deg, var(--ink) 0%, #0f1730 100%);
+  color:#e7e9f2;
+  padding:26px 16px;
+  display:flex;
+  flex-direction:column;
+  position:relative;
+}
+.sidebar .brand{color:#fff; font-size:19px; margin:0 0 2px; padding:0 10px;}
+.sidebar .brand-sub{color:#7f8ab0; margin:0 0 26px; padding:0 10px;}
+.nav{list-style:none; margin:0; padding:0; flex:1;}
+.nav li{margin-bottom:3px;}
+.nav button{
+  width:100%;
+  text-align:left;
+  background:none;
+  border:none;
+  color:#a9b2d1;
+  font-family:var(--sans);
+  font-size:13.5px;
+  font-weight:500;
+  padding:10px 12px;
+  border-radius:7px;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  gap:11px;
+  position:relative;
+  transition:background .15s var(--ease), color .15s var(--ease);
+}
+.nav button svg{flex:none; opacity:0.75; transition:opacity .15s var(--ease);}
+.nav button:hover{background:rgba(255,255,255,0.06); color:#fff;}
+.nav button:hover svg{opacity:1;}
+.nav button.active{background:var(--accent); color:#fff; box-shadow:var(--shadow-sm);}
+.nav button.active svg{opacity:1;}
+.sidebar-foot{
+  border-top:1px solid rgba(255,255,255,0.09);
+  padding:16px 10px 0;
+  font-family:var(--mono);
+  font-size:11px;
+  color:#7c88ab;
+}
+.sidebar-foot button{
+  margin-top:10px;
+  background:none;border:1px solid rgba(255,255,255,0.16);color:#c7cde3;
+  padding:8px 10px;border-radius:6px;font-size:12px;cursor:pointer;width:100%;
+  font-family:var(--sans); transition:border-color .15s var(--ease), color .15s var(--ease), background .15s var(--ease);
+}
+.sidebar-foot button:hover{border-color:#5b6699; color:#fff; background:rgba(255,255,255,0.05);}
+
+.main{padding:32px 40px 60px; overflow-x:auto; animation:fadeIn .35s var(--ease);}
+.topbar{
+  display:flex; align-items:flex-end; justify-content:space-between;
+  margin-bottom:26px; flex-wrap:wrap; gap:14px;
+}
+.page-title{
+  font-family:var(--serif);
+  font-size:28px; font-weight:700; margin:0; letter-spacing:-0.01em;
+}
+.page-eyebrow{
+  font-family:var(--mono); font-size:10.5px; text-transform:uppercase;
+  letter-spacing:0.12em; color:var(--ink-soft); margin:0 0 5px;
+}
+.actions{display:flex; gap:10px; flex-wrap:wrap;}
+
+.btn-secondary{background:var(--paper-raised); color:var(--ink); border:1px solid var(--line);}
+.btn-secondary:hover{border-color:var(--ink-soft); box-shadow:var(--shadow-md);}
+.btn-accent{background:var(--accent); color:#fff;}
+.btn-accent:hover{background:var(--accent-2); box-shadow:var(--shadow-md);}
+.btn-accent:disabled{background:#b9c3bd; cursor:not-allowed; box-shadow:none;}
+.btn-ghost{background:transparent; color:var(--ink-soft); border:1px solid transparent;}
+.btn-ghost:hover{color:var(--rust); background:var(--rust-soft);}
+.btn-sm{padding:6px 11px; font-size:12px; border-radius:5px;}
+
+/* Dashboard cards */
+.cards{
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));
+  gap:14px; margin-bottom:32px;
+}
+.card{
+  background:var(--paper-raised);
+  border:1px solid var(--line);
+  border-radius:9px;
+  padding:18px 20px;
+  position:relative;
+  box-shadow:var(--shadow-sm);
+  transition:transform .18s var(--ease), box-shadow .18s var(--ease), border-color .18s var(--ease);
+  overflow:hidden;
+}
+.card:hover{transform:translateY(-2px); box-shadow:var(--shadow-md); border-color:var(--line-strong);}
+.card::before{
+  content:""; position:absolute; top:0; left:0; right:0; height:3px;
+  background:var(--ink-soft); opacity:0.15;
+}
+.card.accent::before{background:var(--accent); opacity:1;}
+.card.amber::before{background:var(--gold); opacity:1;}
+.card.rust::before{background:var(--rust); opacity:1;}
+.card .icon{
+  width:30px; height:30px; border-radius:7px; display:flex; align-items:center; justify-content:center;
+  background:var(--paper-dim); color:var(--ink-soft); margin-bottom:14px;
+}
+.card.accent .icon{background:var(--accent-soft); color:var(--accent);}
+.card.amber .icon{background:var(--gold-soft); color:var(--gold);}
+.card.rust .icon{background:var(--rust-soft); color:var(--rust);}
+.card .k{
+  font-family:var(--mono); font-size:10.5px; text-transform:uppercase;
+  letter-spacing:0.08em; color:var(--ink-soft); margin:0 0 6px;
+}
+.card .v{
+  font-family:var(--mono); font-size:25px; font-weight:600; margin:0;
+  color:var(--ink); font-variant-numeric:tabular-nums;
+}
+
+.section-title{
+  font-family:var(--mono); font-size:10.5px; text-transform:uppercase;
+  letter-spacing:0.12em; color:var(--ink-soft); margin:28px 0 11px;
+  display:flex; align-items:center; gap:10px;
+}
+.section-title::after{content:""; flex:1; height:1px; background:var(--line);}
+
+/* Tables */
+.table-wrap{
+  background:var(--paper-raised); border:1px solid var(--line); border-radius:9px;
+  overflow:auto; box-shadow:var(--shadow-sm);
+}
+table{width:100%; border-collapse:collapse; font-size:13.5px;}
+thead th{
+  text-align:left; font-family:var(--mono); font-size:10.5px; text-transform:uppercase;
+  letter-spacing:0.06em; color:var(--ink-soft); padding:12px 16px;
+  border-bottom:1px solid var(--line); white-space:nowrap; background:var(--paper-dim);
+}
+tbody td{padding:12px 16px; border-bottom:1px solid var(--line); white-space:nowrap;}
+tbody tr:last-child td{border-bottom:none;}
+tbody tr{transition:background .1s var(--ease);}
+tbody tr:hover{background:#fbfaf1;}
+.num{font-family:var(--mono); text-align:right; font-variant-numeric:tabular-nums;}
+.pill{
+  font-family:var(--mono); font-size:10.5px; padding:4px 9px; border-radius:20px;
+  text-transform:uppercase; letter-spacing:0.04em; font-weight:600; display:inline-block;
+}
+.pill.paid{background:var(--accent-soft); color:var(--accent-2);}
+.pill.pending{background:var(--gold-soft); color:#8a6423;}
+.pill.active{background:var(--accent-soft); color:var(--accent-2);}
+.pill.inactive{background:#ecebe5; color:#888;}
+.row-actions{display:flex; gap:6px;}
+.empty-state{
+  padding:56px 20px; text-align:center; color:var(--ink-soft);
+}
+.empty-state svg{opacity:0.35; margin-bottom:6px;}
+.empty-state p{font-family:var(--mono); font-size:13px; margin:6px 0 0;}
+
+/* Modal */
+.modal-backdrop{
+  position:fixed; inset:0; background:rgba(15,23,48,0.55);
+  display:none; align-items:flex-start; justify-content:center;
+  padding:40px 20px; overflow:auto; z-index:50; backdrop-filter:blur(2px);
+  animation:fadeIn .18s var(--ease);
+}
+.modal-backdrop.open{display:flex;}
+.modal{
+  background:var(--paper-raised); border-radius:10px; width:100%; max-width:520px;
+  border:1px solid var(--line); box-shadow:var(--shadow-lg);
+  animation:fadeUp .22s var(--ease);
+}
+.modal-head{
+  padding:20px 24px; border-bottom:1px solid var(--line);
+  display:flex; align-items:center; justify-content:space-between;
+}
+.modal-head h3{margin:0; font-family:var(--serif); font-size:18px; font-weight:600;}
+.modal-head button{background:none; border:none; font-size:16px; cursor:pointer; color:var(--ink-soft); width:28px; height:28px; border-radius:6px; transition:background .15s var(--ease);}
+.modal-head button:hover{background:var(--paper-dim); color:var(--ink);}
+.modal-body{padding:22px 24px;}
+.modal-foot{padding:16px 24px; border-top:1px solid var(--line); display:flex; justify-content:flex-end; gap:10px; background:var(--paper-dim); border-radius:0 0 10px 10px;}
+.grid-2{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+select{
+  width:100%; padding:11px 13px; border:1.5px solid var(--line); border-radius:6px;
+  font-family:var(--sans); font-size:14px; background:var(--paper); color:var(--ink);
+  transition:border-color .15s var(--ease);
+}
+select:hover{border-color:var(--line-strong);}
+select:focus{outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft);}
+
+/* Payslip */
+.payslip{
+  background:var(--paper-raised); border:1px solid var(--line); border-radius:10px;
+  max-width:640px; padding:36px 40px; margin-top:6px; box-shadow:var(--shadow-md);
+  position:relative;
+}
+.payslip::before{content:""; position:absolute; top:0; left:0; right:0; height:4px; background:var(--accent); border-radius:10px 10px 0 0;}
+.payslip-head{display:flex; justify-content:space-between; align-items:flex-start; border-bottom:2px solid var(--ink); padding-bottom:16px; margin-bottom:18px;}
+.payslip-head h2{margin:0; font-family:var(--serif); font-size:22px; font-weight:700;}
+.payslip-head .m{font-family:var(--mono); font-size:12px; color:var(--ink-soft); margin-top:4px;}
+.payslip-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px 24px; font-size:13.5px; margin-bottom:22px;}
+.payslip-grid div span{display:block; font-family:var(--mono); font-size:10px; text-transform:uppercase; color:var(--ink-soft); letter-spacing:0.06em; margin-bottom:2px;}
+.payslip-line{display:flex; justify-content:space-between; padding:9px 0; border-bottom:1px dashed var(--line); font-size:14px;}
+.payslip-line.total{border-bottom:none; border-top:2px solid var(--ink); margin-top:6px; padding-top:14px; font-weight:700; font-size:18px; font-family:var(--mono);}
+.payslip-line .neg{color:var(--rust);}
+.payslip-line .pos{color:var(--accent);}
+
+.note-box{
+  background:var(--gold-soft); border:1px solid #e6d3aa; border-radius:6px;
+  padding:13px 15px; font-size:12.5px; color:#6b5323; margin-bottom:18px; font-family:var(--mono); line-height:1.6;
+}
+.form-note{font-size:12px; color:var(--ink-soft); margin-top:5px;}
+
+@media print{
+  body *{visibility:hidden;}
+  #printArea, #printArea *{visibility:visible;}
+  #printArea{position:absolute; top:0; left:0; width:100%;}
+}
+
+@media (max-width:900px){
+  #loginScreen{grid-template-columns:1fr;}
+  .login-hero{display:none;}
+  .login-panel .brand, .login-panel .brand-sub{display:block; text-align:left;}
+}
+
+@media (max-width:820px){
+  .shell{grid-template-columns:1fr;}
+  .sidebar{
+    flex-direction:row; align-items:center; overflow-x:auto; padding:14px;
+  }
+  .sidebar .brand, .sidebar .brand-sub{padding:0 6px;}
+  .nav{display:flex; flex:none; gap:4px;}
+  .nav button{white-space:nowrap;}
+  .sidebar-foot{display:none;}
+  .brand-sub{display:none;}
+  .main{padding:20px;}
+  .grid-2{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<!-- ============ LOGIN ============ -->
+<div id="loginScreen">
+  <div class="login-hero">
+    <div class="hero-top">
+      <div class="hero-mark">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" stroke-width="1.6"/><path d="M7 9h10M7 13h6M7 17h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        Paytrack
+      </div>
+      <p class="hero-tagline">The arithmetic, <em>handled automatically.</em></p>
+    </div>
+
+    <div class="ledger-tape">
+      <p class="lt-label">Sample calculation — Net Salary</p>
+      <div class="lt-row" style="animation-delay:.15s"><span>Basic Salary</span><span>₹30,000</span></div>
+      <div class="lt-row" style="animation-delay:.35s"><span>Advance Deduction</span><span class="minus">− ₹5,000</span></div>
+      <div class="lt-row" style="animation-delay:.55s"><span>Leave Deduction</span><span class="minus">− ₹1,500</span></div>
+      <div class="lt-row" style="animation-delay:.75s"><span>Bonus</span><span class="plus">+ ₹2,000</span></div>
+      <div class="lt-row total" style="animation-delay:.95s"><span>Net Salary</span><span>₹25,500</span></div>
+    </div>
+
+    <p class="hero-foot">Employees · Advances · Leaves · Payroll · Payslips · Reports<br/>All in one admin console.</p>
+  </div>
+
+  <div class="login-panel">
+    <div class="login-card">
+      <p class="brand">Paytrack</p>
+      <p class="brand-sub">Salary Management — Admin</p>
+      <p class="login-error" id="loginError">Incorrect username or password.</p>
+      <div class="field">
+        <label for="loginUser">Username</label>
+        <input id="loginUser" type="text" autocomplete="username" />
+      </div>
+      <div class="field">
+        <label for="loginPass">Password</label>
+        <input id="loginPass" type="password" autocomplete="current-password" />
+      </div>
+      <button class="btn btn-primary btn-block" onclick="attemptLogin()">Sign in</button>
+      <p class="login-hint">Default credentials: <b>admin</b> / <b>admin123</b><br/>Change the password anytime from Settings after signing in.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============ APP ============ -->
+<div id="app">
+<div class="shell">
+  <aside class="sidebar">
+    <p class="brand">Paytrack</p>
+    <p class="brand-sub">Salary Management</p>
+    <ul class="nav" id="navList">
+      <li><button data-page="dashboard" class="active"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.6"/><rect x="13" y="3" width="8" height="5" rx="1.5" stroke="currentColor" stroke-width="1.6"/><rect x="13" y="10" width="8" height="11" rx="1.5" stroke="currentColor" stroke-width="1.6"/><rect x="3" y="13" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.6"/></svg>Dashboard</button></li>
+      <li><button data-page="employees"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3.2" stroke="currentColor" stroke-width="1.6"/><path d="M3.5 20c0-3.5 2.6-6 5.5-6s5.5 2.5 5.5 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="17.5" cy="8.5" r="2.4" stroke="currentColor" stroke-width="1.6"/><path d="M15 20c0-2.7 1.4-4.6 3.2-5.3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>Employees</button></li>
+      <li><button data-page="advances"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 17V7a1 1 0 011-1h9l6 6v5a1 1 0 01-1 1H5a1 1 0 01-1-1z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M14 6v5a1 1 0 001 1h5" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>Advances</button></li>
+      <li><button data-page="leaves"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3.5" y="4.5" width="17" height="16" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M3.5 9.5h17M8 3v3M16 3v3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>Leaves</button></li>
+      <li><button data-page="payroll"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 12a8 8 0 1116 0 8 8 0 01-16 0z" stroke="currentColor" stroke-width="1.6"/><path d="M12 8v4l2.5 2.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>Payroll</button></li>
+      <li><button data-page="payslips"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 3h9l4 4v13a1 1 0 01-1 1H6a1 1 0 01-1-1V4a1 1 0 011-1z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8.5 12h7M8.5 15.5h5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>Payslips</button></li>
+      <li><button data-page="reports"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 20V10M11 20V4M18 20v-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Reports</button></li>
+      <li><button data-page="settings"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.6"/><path d="M19.4 13.5a7.6 7.6 0 000-3l2-1.5-2-3.5-2.4.7a7.6 7.6 0 00-2.6-1.5L14 2h-4l-.4 2.7a7.6 7.6 0 00-2.6 1.5l-2.4-.7-2 3.5 2 1.5a7.6 7.6 0 000 3l-2 1.5 2 3.5 2.4-.7a7.6 7.6 0 002.6 1.5L10 22h4l.4-2.7a7.6 7.6 0 002.6-1.5l2.4.7 2-3.5-2-1.5z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>Settings</button></li>
+    </ul>
+    <div class="sidebar-foot">
+      Signed in as <span id="whoami">admin</span>
+      <button onclick="logout()">Sign out</button>
+    </div>
+  </aside>
+
+  <main class="main" id="main">
+    <!-- pages injected here -->
+  </main>
+</div>
+</div>
+
+<!-- ============ Generic Modal ============ -->
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="modalTitle">Title</h3>
+      <button onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-foot" id="modalFoot"></div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   STATE + STORAGE
+   ============================================================ */
+let state = {
+  auth: { username: 'admin', password: 'admin123' },
+  employees: [],
+  advances: [],
+  leaves: [],
+  payroll: [],
+  history: []
+};
+
+const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+function currentMonthLabel(){ const d=new Date(); return MONTHS[d.getMonth()]+" "+d.getFullYear(); }
+
+function uid(prefix){ return prefix + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function money(n){ n = Number(n)||0; return '₹' + n.toLocaleString('en-IN', {maximumFractionDigits:0}); }
+function formatDate(dStr){
+  if(!dStr) return '—';
+  if(/^\d{4}-\d{2}-\d{2}$/.test(dStr)){
+    const [y,m,d] = dStr.split('-');
+    return `${d}/${m}/${y}`;
+  }
+  return dStr;
+}
+
+const STORAGE_KEY = 'paytrack-data';
+async function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){
+      const parsed = JSON.parse(raw);
+      state = Object.assign(state, parsed);
+    }
+  }catch(e){ console.error('Load failed', e); /* no data yet — first run */ }
+}
+async function saveState(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }catch(e){ console.error('Save failed — your browser storage may be full or disabled.', e); }
+}
+
+/* ============================================================
+   LOGIN
+   ============================================================ */
+async function attemptLogin(){
+  const u = document.getElementById('loginUser').value.trim();
+  const p = document.getElementById('loginPass').value;
+  const err = document.getElementById('loginError');
+  if(u === state.auth.username && p === state.auth.password){
+    err.style.display = 'none';
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('whoami').textContent = state.auth.username;
+    renderPage('dashboard');
+  } else {
+    err.style.display = 'block';
+  }
+}
+function logout(){
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('loginUser').value = '';
+  document.getElementById('loginPass').value = '';
+}
+document.getElementById('loginPass').addEventListener('keydown', e=>{ if(e.key==='Enter') attemptLogin(); });
+
+/* ============================================================
+   NAV
+   ============================================================ */
+document.getElementById('navList').addEventListener('click', e=>{
+  const btn = e.target.closest('button[data-page]');
+  if(!btn) return;
+  document.querySelectorAll('#navList button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderPage(btn.dataset.page);
+});
+
+function renderPage(page){
+  const main = document.getElementById('main');
+  const renderers = {
+    dashboard: renderDashboard,
+    employees: renderEmployees,
+    advances: renderAdvances,
+    leaves: renderLeaves,
+    payroll: renderPayroll,
+    payslips: renderPayslips,
+    reports: renderReports,
+    settings: renderSettings
+  };
+  main.innerHTML = '';
+  (renderers[page] || renderDashboard)();
+}
+
+function empName(id){ const e = state.employees.find(x=>x.id===id); return e ? e.name : '—'; }
+
+/* ============================================================
+   DASHBOARD
+   ============================================================ */
+function renderDashboard(){
+  const activeEmp = state.employees.filter(e=>e.status==='Active').length;
+  const totalSalaryBase = state.employees.reduce((s,e)=> s + (Number(e.basicSalary)||0), 0);
+  const totalAdvanceOutstanding = state.advances.reduce((s,a)=> s + (Number(a.remainingBalance)||0), 0);
+  const thisMonth = currentMonthLabel();
+  const monthLeaveDeduction = state.leaves.filter(l=>l.month===thisMonth).reduce((s,l)=> s + (Number(l.leaveDeduction)||0), 0);
+  const paid = state.payroll.filter(p=>p.paymentStatus==='Paid').reduce((s,p)=> s + (Number(p.netSalary)||0), 0);
+  const pending = state.payroll.filter(p=>p.paymentStatus==='Pending').reduce((s,p)=> s + (Number(p.netSalary)||0), 0);
+
+  const main = document.getElementById('main');
+  main.innerHTML = `
+    <div class="topbar">
+      <div><p class="page-eyebrow">Overview</p><h1 class="page-title">Dashboard</h1></div>
+    </div>
+    <div class="cards">
+      <div class="card">${icon('users')}<p class="k">Total Employees</p><p class="v">${state.employees.length}</p></div>
+      <div class="card accent">${icon('check')}<p class="k">Active Employees</p><p class="v">${activeEmp}</p></div>
+      <div class="card">${icon('wallet')}<p class="k">Total Base Salary</p><p class="v">${money(totalSalaryBase)}</p></div>
+      <div class="card amber">${icon('handout')}<p class="k">Advance Outstanding</p><p class="v">${money(totalAdvanceOutstanding)}</p></div>
+      <div class="card">${icon('calendar')}<p class="k">Leave Deduction (${thisMonth})</p><p class="v">${money(monthLeaveDeduction)}</p></div>
+      <div class="card accent">${icon('check')}<p class="k">Paid Salary (Total)</p><p class="v">${money(paid)}</p></div>
+      <div class="card rust">${icon('clock')}<p class="k">Pending Salary</p><p class="v">${money(pending)}</p></div>
+    </div>
+    <p class="section-title">Recent Payroll Activity</p>
+    <div class="table-wrap">
+      ${renderPayrollTableRows(state.payroll.slice(-6).reverse(), true)}
+    </div>
+  `;
+  if(state.employees.length===0){
+    main.querySelector('.table-wrap').outerHTML = emptyState('No payroll runs yet. Add employees, then generate salary from the Payroll page.');
+  }
+}
+
+function emptyState(msg){
+  return `<div class="table-wrap"><div class="empty-state">
+    <svg width="34" height="34" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.4"/><path d="M7 9h10M7 13h6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+    <p>${msg}</p>
+  </div></div>`;
+}
+function icon(name){
+  const icons = {
+    users: '<circle cx="9" cy="8" r="3.2" stroke="currentColor" stroke-width="1.6"/><path d="M3.5 20c0-3.5 2.6-6 5.5-6s5.5 2.5 5.5 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="17.5" cy="8.5" r="2.4" stroke="currentColor" stroke-width="1.6"/><path d="M15 20c0-2.7 1.4-4.6 3.2-5.3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
+    check: '<path d="M4 12a8 8 0 1116 0 8 8 0 01-16 0z" stroke="currentColor" stroke-width="1.6"/><path d="M8.5 12.5l2.3 2.3L15.5 9.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>',
+    wallet: '<path d="M4 8a2 2 0 012-2h11a1 1 0 011 1v2M4 8v9a2 2 0 002 2h12a1 1 0 001-1V10a1 1 0 00-1-1H7a2 2 0 000 4h11" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
+    handout: '<path d="M4 17V7a1 1 0 011-1h9l6 6v5a1 1 0 01-1 1H5a1 1 0 01-1-1z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M14 6v5a1 1 0 001 1h5" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
+    calendar: '<rect x="3.5" y="4.5" width="17" height="16" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M3.5 9.5h17M8 3v3M16 3v3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
+    clock: '<path d="M4 12a8 8 0 1116 0 8 8 0 01-16 0z" stroke="currentColor" stroke-width="1.6"/><path d="M12 8v4l2.5 2.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>'
+  };
+  return `<div class="icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none">${icons[name]||''}</svg></div>`;
+}
+
+/* ============================================================
+   EMPLOYEES
+   ============================================================ */
+function renderEmployees(){
+  const main = document.getElementById('main');
+  main.innerHTML = `
+    <div class="topbar">
+      <div><p class="page-eyebrow">People</p><h1 class="page-title">Employees</h1></div>
+      <div class="actions"><button class="btn btn-accent" onclick="openEmployeeForm()">+ Add Employee</button></div>
+    </div>
+    <div id="empTableHolder"></div>
+  `;
+  renderEmployeeTable();
+}
+function renderEmployeeTable(){
+  const holder = document.getElementById('empTableHolder');
+  if(state.employees.length===0){ holder.innerHTML = emptyState('No employees yet. Click "Add Employee" to create your first record.'); return; }
+  holder.innerHTML = `
+    <div class="table-wrap"><table>
+      <thead><tr>
+        <th>Name</th><th>Mobile</th><th>Department</th><th>Designation</th>
+        <th>Joining Date</th><th class="num">Basic Salary</th><th>Status</th><th></th>
+      </tr></thead>
+      <tbody>
+        ${state.employees.map(e=>`
+          <tr>
+            <td><b>${escapeHtml(e.name)}</b></td>
+            <td>${escapeHtml(e.mobile||'—')}</td>
+            <td>${escapeHtml(e.department||'—')}</td>
+            <td>${escapeHtml(e.designation||'—')}</td>
+            <td>${formatDate(e.joiningDate)}</td>
+            <td class="num">${money(e.basicSalary)}</td>
+            <td><span class="pill ${e.status==='Active'?'active':'inactive'}">${e.status}</span></td>
+            <td><div class="row-actions">
+              <button class="btn btn-secondary btn-sm" onclick="openEmployeeForm('${e.id}')">Edit</button>
+              <button class="btn btn-ghost btn-sm" onclick="deleteEmployee('${e.id}')">Delete</button>
+            </div></td>
+          </tr>`).join('')}
+      </tbody>
+    </table></div>
+  `;
+}
+function openEmployeeForm(id){
+  const emp = id ? state.employees.find(e=>e.id===id) : null;
+  openModal(emp ? 'Edit Employee' : 'Add Employee', `
+    <div class="grid-2">
+      <div class="field"><label>Employee Name</label><input id="f_name" value="${emp?escapeHtml(emp.name):''}" /></div>
+      <div class="field"><label>Mobile Number</label><input id="f_mobile" value="${emp?escapeHtml(emp.mobile||''):''}" /></div>
+      <div class="field"><label>Department</label><input id="f_department" value="${emp?escapeHtml(emp.department||''):''}" /></div>
+      <div class="field"><label>Designation</label><input id="f_designation" value="${emp?escapeHtml(emp.designation||''):''}" /></div>
+      <div class="field"><label>Joining Date <span style="font-size:11px; color:var(--ink-soft);">(DD/MM/YYYY)</span></label><input id="f_joiningDate" type="date" value="${emp?emp.joiningDate||'':''}" /></div>
+      <div class="field"><label>Basic Salary (₹)</label><input id="f_basicSalary" type="number" value="${emp?emp.basicSalary:''}" /></div>
+      <div class="field"><label>Status</label>
+        <select id="f_status">
+          <option ${emp&&emp.status==='Active'?'selected':''}>Active</option>
+          <option ${emp&&emp.status==='Inactive'?'selected':''}>Inactive</option>
+        </select>
+      </div>
+    </div>
+    <div class="field"><label>Address</label><input id="f_address" value="${emp?escapeHtml(emp.address||''):''}" /></div>
+  `, [
+    {label:'Cancel', cls:'btn-secondary', onClick: closeModal},
+    {label: emp?'Save Changes':'Add Employee', cls:'btn-accent', onClick: ()=>saveEmployee(id)}
+  ]);
+}
+async function saveEmployee(id){
+  const name = document.getElementById('f_name').value.trim();
+  if(!name){ alert('Employee name is required.'); return; }
+  const data = {
+    name,
+    mobile: document.getElementById('f_mobile').value.trim(),
+    department: document.getElementById('f_department').value.trim(),
+    designation: document.getElementById('f_designation').value.trim(),
+    joiningDate: document.getElementById('f_joiningDate').value,
+    basicSalary: Number(document.getElementById('f_basicSalary').value)||0,
+    status: document.getElementById('f_status').value,
+    address: document.getElementById('f_address').value.trim(),
+  };
+
+  if(id){
+    const collision = state.employees.find(x => x.id !== id && (
+      (x.name && x.name.toLowerCase().trim() === data.name.toLowerCase()) ||
+      (data.mobile && x.mobile && x.mobile.trim() === data.mobile.trim())
+    ));
+    if(collision){
+      alert(`Another employee already exists with these details (${collision.name} - ${collision.department}).`);
+      return;
+    }
+    const e = state.employees.find(x=>x.id===id);
+    Object.assign(e, data);
+  } else {
+    const existing = state.employees.find(x => 
+      (x.name && x.name.toLowerCase().trim() === data.name.toLowerCase()) ||
+      (data.mobile && x.mobile && x.mobile.trim() === data.mobile.trim())
+    );
+    if(existing){
+      alert(`Employee already exists: "${existing.name}" is already registered in ${existing.department}.`);
+      return;
+    }
+    data.id = uid('emp');
+    state.employees.push(data);
+  }
+  await saveState();
+  closeModal();
+  renderEmployees();
+}
+async function deleteEmployee(id){
+  if(!confirm('Delete this employee? This does not remove their historical payroll records.')) return;
+  state.employees = state.employees.filter(e=>e.id!==id);
+  await saveState();
+  renderEmployees();
+}
+
+/* ============================================================
+   ADVANCES
+   ============================================================ */
+function renderAdvances(){
+  const main = document.getElementById('main');
+  main.innerHTML = `
+    <div class="topbar">
+      <div><p class="page-eyebrow">Money Out</p><h1 class="page-title">Advances</h1></div>
+      <div class="actions"><button class="btn btn-accent" onclick="openAdvanceForm()" ${state.employees.length===0?'disabled':''}>+ Add Advance</button></div>
+    </div>
+    <div id="advTableHolder"></div>
+  `;
+  if(state.employees.length===0){ document.getElementById('advTableHolder').innerHTML = emptyState('Add an employee first before recording an advance.'); return; }
+  renderAdvanceTable();
+}
+function renderAdvanceTable(){
+  const holder = document.getElementById('advTableHolder');
+  if(state.advances.length===0){ holder.innerHTML = emptyState('No advances recorded yet.'); return; }
+  holder.innerHTML = `
+    <div class="table-wrap"><table>
+      <thead><tr><th>Employee</th><th>Date</th><th class="num">Advance Amount</th><th class="num">Remaining Balance</th><th>Reason</th><th></th></tr></thead>
+      <tbody>
+        ${state.advances.map(a=>`
+          <tr>
+            <td><b>${escapeHtml(empName(a.employeeId))}</b></td>
+            <td>${a.advanceDate||'—'}</td>
+            <td class="num">${money(a.advanceAmount)}</td>
+            <td class="num">${money(a.remainingBalance)}</td>
+            <td>${escapeHtml(a.reason||'—')}</td>
+            <td><div class="row-actions">
+              <button class="btn btn-secondary btn-sm" onclick="openAdvanceForm('${a.id}')">Edit</button>
+              <button class="btn btn-ghost btn-sm" onclick="deleteAdvance('${a.id}')">Delete</button>
+            </div></td>
+          </tr>`).join('')}
+      </tbody>
+    </table></div>
+  `;
+}
+function openAdvanceForm(id){
+  const adv = id ? state.advances.find(a=>a.id===id) : null;
+  openModal(adv ? 'Edit Advance' : 'Add Advance', `
+    <div class="field"><label>Employee</label>
+      <select id="f_employeeId">${state.employees.map(e=>`<option value="${e.id}" ${adv&&adv.employeeId===e.id?'selected':''}>${escapeHtml(e.name)}</option>`).join('')}</select>
+    </div>
+    <div class="grid-2">
+      <div class="field"><label>Advance Amount (₹)</label><input id="f_advanceAmount" type="number" value="${adv?adv.advanceAmount:''}" /></div>
+      <div class="field"><label>Advance Date</label><input id="f_advanceDate" type="date" value="${adv?adv.advanceDate||'':''}" /></div>
+    </div>
+    <div class="field"><label>Remaining Balance (₹)</label><input id="f_remainingBalance" type="number" value="${adv?adv.remainingBalance:(adv?'':'')}" />
+      <p class="form-note">Defaults to the advance amount if left blank.</p>
+    </div>
+    <div class="field"><label>Reason</label><input id="f_reason" value="${adv?escapeHtml(adv.reason||''):''}" /></div>
+  `, [
+    {label:'Cancel', cls:'btn-secondary', onClick: closeModal},
+    {label: adv?'Save Changes':'Add Advance', cls:'btn-accent', onClick: ()=>saveAdvance(id)}
+  ]);
+}
+async function saveAdvance(id){
+  const employeeId = document.getElementById('f_employeeId').value;
+  const advanceAmount = Number(document.getElementById('f_advanceAmount').value)||0;
+  let remainingBalance = document.getElementById('f_remainingBalance').value;
+  remainingBalance = remainingBalance === '' ? advanceAmount : Number(remainingBalance);
+  const data = {
+    employeeId, advanceAmount, remainingBalance,
+    advanceDate: document.getElementById('f_advanceDate').value,
+    reason: document.getElementById('f_reason').value.trim(),
+  };
+  if(id){ Object.assign(state.advances.find(a=>a.id===id), data); }
+  else { data.id = uid('adv'); state.advances.push(data); }
+  await saveState();
+  closeModal();
+  renderAdvances();
+}
+async function deleteAdvance(id){
+  if(!confirm('Delete this advance record?')) return;
+  state.advances = state.advances.filter(a=>a.id!==id);
+  await saveState();
+  renderAdvances();
+}
+
+/* ============================================================
+   LEAVES
+   ============================================================ */
+function renderLeaves(){
+  const main = document.getElementById('main');
+  main.innerHTML = `
+    <div class="topbar">
+      <div><p class="page-eyebrow">Attendance</p><h1 class="page-title">Leaves</h1></div>
+      <div class="actions"><button class="btn btn-accent" onclick="openLeaveForm()" ${state.employees.length===0?'disabled':''}>+ Add Leave</button></div>
+    </div>
+    <div id="leaveTableHolder"></div>
+  `;
+  if(state.employees.length===0){ document.getElementById('leaveTableHolder').innerHTML = emptyState('Add an employee first before recording leave.'); return; }
+  renderLeaveTable();
+}
+function renderLeaveTable(){
+  const holder = document.getElementById('leaveTableHolder');
+  if(state.leaves.length===0){ holder.innerHTML = emptyState('No leave records yet.'); return; }
+  holder.innerHTML = `
+    <div class="table-wrap"><table>
+      <thead><tr><th>Employee</th><th>Month</th><th class="num">Paid Leave</th><th class="num">Unpaid Leave</th><th class="num">Leave Deduction</th><th></th></tr></thead>
+      <tbody>
+        ${state.leaves.map(l=>`
+          <tr>
+            <td><b>${escapeHtml(empName(l.employeeId))}</b></td>
+            <td>${l.month}</td>
+            <td class="num">${l.paidLeave}</td>
+            <td class="num">${l.unpaidLeave}</td>
+            <td class="num">${money(l.leaveDeduction)}</td>
+            <td><div class="row-actions">
+              <button class="btn btn-secondary btn-sm" onclick="openLeaveForm('${l.id}')">Edit</button>
+              <button class="btn btn-ghost btn-sm" onclick="deleteLeave('${l.id}')">Delete</button>
+            </div></td>
+          </tr>`).join('')}
+      </tbody>
+    </table></div>
+  `;
+}
+function openLeaveForm(id){
+  const lv = id ? state.leaves.find(l=>l.id===id) : null;
+  openModal(lv ? 'Edit Leave' : 'Add Leave', `
+    <div class="field"><label>Employee</label>
+      <select id="f_employeeId">${state.employees.map(e=>`<option value="${e.id}" ${lv&&lv.employeeId===e.id?'selected':''}>${escapeHtml(e.name)}</option>`).join('')}</select>
+    </div>
+    <div class="field"><label>Month</label>
+      <select id="f_month">${MONTHS.map(m=>{const label=m+' '+new Date().getFullYear(); return `<option ${lv&&lv.month===label?'selected':''}>${label}</option>`;}).join('')}</select>
+    </div>
+    <div class="grid-2">
+      <div class="field"><label>Paid Leave (days)</label><input id="f_paidLeave" type="number" value="${lv?lv.paidLeave:0}" /></div>
+      <div class="field"><label>Unpaid Leave (days)</label><input id="f_unpaidLeave" type="number" value="${lv?lv.unpaidLeave:0}" /></div>
+    </div>
+    <div class="field"><label>Leave Deduction (₹)</label><input id="f_leaveDeduction" type="number" value="${lv?lv.leaveDeduction:0}" />
+      <p class="form-note">Enter the rupee amount to deduct for unpaid leave days.</p>
+    </div>
+  `, [
+    {label:'Cancel', cls:'btn-secondary', onClick: closeModal},
+    {label: lv?'Save Changes':'Add Leave', cls:'btn-accent', onClick: ()=>saveLeave(id)}
+  ]);
+}
+async function saveLeave(id){
+  const data = {
+    employeeId: document.getElementById('f_employeeId').value,
+    month: document.getElementById('f_month').value,
+    paidLeave: Number(document.getElementById('f_paidLeave').value)||0,
+    unpaidLeave: Number(document.getElementById('f_unpaidLeave').value)||0,
+    leaveDeduction: Number(document.getElementById('f_leaveDeduction').value)||0,
+  };
+  if(id){ Object.assign(state.leaves.find(l=>l.id===id), data); }
+  else { data.id = uid('lv'); state.leaves.push(data); }
+  await saveState();
+  closeModal();
+  renderLeaves();
+}
+async function deleteLeave(id){
+  if(!confirm('Delete this leave record?')) return;
+  state.leaves = state.leaves.filter(l=>l.id!==id);
+  await saveState();
+  renderLeaves();
+}
+
+/* ============================================================
+   PAYROLL
+   ============================================================ */
+function renderPayroll(){
+  const main = document.getElementById('main');
+  main.innerHTML = `
+    <div class="topbar">
+      <div><p class="page-eyebrow">Calculate</p><h1 class="page-title">Payroll</h1></div>
+      <div class="actions"><button class="btn btn-accent" onclick="openGenerateSalary()" ${state.employees.length===0?'disabled':''}>Generate Salary</button></div>
+    </div>
+    <div id="payrollTableHolder"></div>
+  `;
+  if(state.employees.length===0){ document.getElementById('payrollTableHolder').innerHTML = emptyState('Add an employee first, then generate their salary here.'); return; }
+  document.getElementById('payrollTableHolder').innerHTML = renderPayrollTableRows(state.payroll.slice().reverse(), false);
+}
+function renderPayrollTableRows(rows, compact){
+  if(rows.length===0) return emptyState('No payroll runs yet.');
+  return `
+    <div class="table-wrap"><table>
+      <thead><tr>
+        <th>Employee</th><th>Month</th><th class="num">Basic</th><th class="num">Advance Ded.</th>
+        <th class="num">Leave Ded.</th><th class="num">Bonus</th><th class="num">Other Ded.</th>
+        <th class="num">Net Salary</th><th>Status</th>${compact?'':'<th></th>'}
+      </tr></thead>
+      <tbody>
+        ${rows.map(p=>`
+          <tr>
+            <td><b>${escapeHtml(empName(p.employeeId))}</b></td>
+            <td>${p.month}</td>
+            <td class="num">${money(p.basicSalary)}</td>
+            <td class="num">${money(p.advanceDeduction)}</td>
+            <td class="num">${money(p.leaveDeduction)}</td>
+            <td class="num">${money(p.bonus)}</td>
+            <td class="num">${money(p.otherDeduction)}</td>
+            <td class="num"><b>${money(p.netSalary)}</b></td>
+            <td><span class="pill ${p.paymentStatus==='Paid'?'paid':'pending'}">${p.paymentStatus}</span></td>
+            ${compact?'':`<td><div class="row-actions">
+              ${p.paymentStatus==='Pending' ? `<button class="btn btn-secondary btn-sm" onclick="markPaid('${p.id}')">Mark Paid</button>` : ''}
+              <button class="btn btn-ghost btn-sm" onclick="deletePayroll('${p.id}')">Delete</button>
+            </div></td>`}
+          </tr>`).join('')}
+      </tbody>
+    </table></div>
+  `;
+}
+function openGenerateSalary(){
+  openModal('Generate Salary', `
+    <div class="field"><label>Employee</label>
+      <select id="gs_employeeId" onchange="updateGenPreview()">${state.employees.map(e=>`<option value="${e.id}">${escapeHtml(e.name)}</option>`).join('')}</select>
+    </div>
+    <div class="field"><label>Month</label>
+      <select id="gs_month" onchange="updateGenPreview()">${MONTHS.map(m=>{const label=m+' '+new Date().getFullYear(); return `<option ${label===currentMonthLabel()?'selected':''}>${label}</option>`;}).join('')}</select>
+    </div>
+    <div class="grid-2">
+      <div class="field"><label>Bonus (₹)</label><input id="gs_bonus" type="number" value="0" oninput="updateGenPreview()" /></div>
+      <div class="field"><label>Other Deduction (₹)</label><input id="gs_otherDeduction" type="number" value="0" oninput="updateGenPreview()" /></div>
+    </div>
+    <div class="note-box" id="gs_preview">Select an employee to preview the calculation.</div>
+  `, [
+    {label:'Cancel', cls:'btn-secondary', onClick: closeModal},
+    {label:'Generate Salary', cls:'btn-accent', onClick: generateSalary}
+  ]);
+  setTimeout(updateGenPreview, 0);
+}
+function computeSalaryPreview(){
+  const employeeId = document.getElementById('gs_employeeId').value;
+  const month = document.getElementById('gs_month').value;
+  const bonus = Number(document.getElementById('gs_bonus').value)||0;
+  const otherDeduction = Number(document.getElementById('gs_otherDeduction').value)||0;
+  const emp = state.employees.find(e=>e.id===employeeId);
+  const basicSalary = emp ? Number(emp.basicSalary)||0 : 0;
+  const advance = state.advances.filter(a=>a.employeeId===employeeId).reduce((s,a)=> s + (Number(a.remainingBalance)||0), 0);
+  const leaveRec = state.leaves.find(l=>l.employeeId===employeeId && l.month===month);
+  const leaveDeduction = leaveRec ? Number(leaveRec.leaveDeduction)||0 : 0;
+  const netSalary = basicSalary - advance - leaveDeduction + bonus - otherDeduction;
+  return {employeeId, month, basicSalary, advanceDeduction:advance, leaveDeduction, bonus, otherDeduction, netSalary};
+}
+function updateGenPreview(){
+  const p = computeSalaryPreview();
+  document.getElementById('gs_preview').innerHTML =
+    `${money(p.basicSalary)} − ${money(p.advanceDeduction)} (advance) − ${money(p.leaveDeduction)} (leave) + ${money(p.bonus)} (bonus) − ${money(p.otherDeduction)} (other)<br/><b>Net Salary = ${money(p.netSalary)}</b>`;
+}
+async function generateSalary(){
+  const p = computeSalaryPreview();
+  const existing = state.payroll.find(x=>x.employeeId===p.employeeId && x.month===p.month);
+  if(existing && !confirm('Salary for this employee and month already exists. Regenerate and overwrite it?')) return;
+  const record = {
+    id: existing?existing.id:uid('pr'),
+    employeeId: p.employeeId, month: p.month,
+    basicSalary: p.basicSalary, advanceDeduction: p.advanceDeduction, leaveDeduction: p.leaveDeduction,
+    bonus: p.bonus, otherDeduction: p.otherDeduction, netSalary: p.netSalary,
+    paymentStatus: existing?existing.paymentStatus:'Pending',
+    paymentDate: existing?existing.paymentDate:null
+  };
+  if(existing){ Object.assign(existing, record); }
+  else { state.payroll.push(record); }
+
+  // reduce advance balance by what was deducted, oldest first
+  let remainingToDeduct = p.advanceDeduction;
+  if(!existing && remainingToDeduct > 0){
+    const advList = state.advances.filter(a=>a.employeeId===p.employeeId).sort((a,b)=> (a.advanceDate||'').localeCompare(b.advanceDate||''));
+    for(const a of advList){
+      if(remainingToDeduct<=0) break;
+      const deduct = Math.min(a.remainingBalance, remainingToDeduct);
+      a.remainingBalance -= deduct;
+      remainingToDeduct -= deduct;
+    }
+  }
+
+  if(!existing){
+    state.history.push({id:uid('hist'), employeeId:p.employeeId, month:p.month, netSalary:p.netSalary, paidDate:null});
+  } else {
+    const h = state.history.find(x=>x.employeeId===p.employeeId && x.month===p.month);
+    if(h) h.netSalary = p.netSalary;
+  }
+
+  await saveState();
+  closeModal();
+  renderPayroll();
+}
+async function markPaid(id){
+  const p = state.payroll.find(x=>x.id===id);
+  p.paymentStatus = 'Paid';
+  p.paymentDate = new Date().toISOString().slice(0,10);
+  const h = state.history.find(x=>x.employeeId===p.employeeId && x.month===p.month);
+  if(h) h.paidDate = p.paymentDate;
+  await saveState();
+  renderPayroll();
+}
+async function deletePayroll(id){
+  if(!confirm('Delete this payroll record?')) return;
+  state.payroll = state.payroll.filter(p=>p.id!==id);
+  await saveState();
+  renderPayroll();
+}
+
+/* ============================================================
+   PAYSLIPS
+   ============================================================ */
+function renderPayslips(){
+  const main = document.getElementById('main');
+  main.innerHTML = `
+    <div class="topbar">
+      <div><p class="page-eyebrow">Documents</p><h1 class="page-title">Payslips</h1></div>
+    </div>
+    <div class="field" style="max-width:340px;">
+      <label>Select Payroll Record</label>
+      <select id="ps_select" onchange="renderPayslipPreview()">
+        <option value="">— choose —</option>
+        ${state.payroll.slice().reverse().map(p=>`<option value="${p.id}">${escapeHtml(empName(p.employeeId))} — ${p.month}</option>`).join('')}
+      </select>
+    </div>
+    <div id="ps_holder"></div>
+  `;
+  if(state.payroll.length===0){
+    document.getElementById('ps_holder').innerHTML = emptyState('No payroll runs yet. Generate a salary from the Payroll page first.');
+  }
+}
+function renderPayslipPreview(){
+  const id = document.getElementById('ps_select').value;
+  const holder = document.getElementById('ps_holder');
+  if(!id){ holder.innerHTML=''; return; }
+  const p = state.payroll.find(x=>x.id===id);
+  const emp = state.employees.find(e=>e.id===p.employeeId) || {};
+  holder.innerHTML = `
+    <div class="actions" style="margin:16px 0;">
+      <button class="btn btn-secondary" onclick="printPayslip()">Print Payslip</button>
+      <button class="btn btn-accent" onclick="downloadPayslipPDF('${p.id}')">Download PDF</button>
+    </div>
+    <div id="printArea">
+    <div class="payslip">
+      <div class="payslip-head">
+        <div><h2>Payslip</h2><div class="m">${p.month}</div></div>
+        <div class="m" style="text-align:right;">Paytrack Salary Management</div>
+      </div>
+      <div class="payslip-grid">
+        <div><span>Employee Name</span>${escapeHtml(emp.name||'—')}</div>
+        <div><span>Designation</span>${escapeHtml(emp.designation||'—')}</div>
+        <div><span>Department</span>${escapeHtml(emp.department||'—')}</div>
+        <div><span>Status</span>${p.paymentStatus}${p.paymentDate?(' on '+p.paymentDate):''}</div>
+      </div>
+      <div class="payslip-line"><span>Basic Salary</span><span>${money(p.basicSalary)}</span></div>
+      <div class="payslip-line"><span>Bonus</span><span class="pos">+ ${money(p.bonus)}</span></div>
+      <div class="payslip-line"><span>Advance Deduction</span><span class="neg">− ${money(p.advanceDeduction)}</span></div>
+      <div class="payslip-line"><span>Leave Deduction</span><span class="neg">− ${money(p.leaveDeduction)}</span></div>
+      <div class="payslip-line"><span>Other Deduction</span><span class="neg">− ${money(p.otherDeduction)}</span></div>
+      <div class="payslip-line total"><span>Net Salary</span><span>${money(p.netSalary)}</span></div>
+    </div>
+    </div>
+  `;
+}
+function printPayslip(){ window.print(); }
+function downloadPayslipPDF(id){
+  const p = state.payroll.find(x=>x.id===id);
+  const emp = state.employees.find(e=>e.id===p.employeeId) || {};
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  let y = 20;
+  doc.setFont('helvetica','bold'); doc.setFontSize(18); doc.text('Payslip', 14, y);
+  doc.setFontSize(11); doc.setFont('helvetica','normal'); doc.text(p.month, 14, y+7);
+  y += 20;
+  doc.setDrawColor(20,33,61); doc.line(14, y, 196, y); y+=10;
+  doc.setFontSize(11);
+  const rows = [
+    ['Employee Name', emp.name||'—'],
+    ['Designation', emp.designation||'—'],
+    ['Department', emp.department||'—'],
+    ['Payment Status', p.paymentStatus + (p.paymentDate?(' on '+p.paymentDate):'')],
+  ];
+  rows.forEach(r=>{ doc.text(r[0], 14, y); doc.text(String(r[1]), 100, y); y+=8; });
+  y += 4; doc.line(14, y, 196, y); y += 10;
+  const lines = [
+    ['Basic Salary', money(p.basicSalary)],
+    ['Bonus', '+ ' + money(p.bonus)],
+    ['Advance Deduction', '- ' + money(p.advanceDeduction)],
+    ['Leave Deduction', '- ' + money(p.leaveDeduction)],
+    ['Other Deduction', '- ' + money(p.otherDeduction)],
+  ];
+  lines.forEach(l=>{ doc.text(l[0], 14, y); doc.text(l[1], 160, y, {align:'right'}); y+=8; });
+  y += 4; doc.setLineWidth(0.8); doc.line(14, y, 196, y); y += 10;
+  doc.setFont('helvetica','bold'); doc.setFontSize(14);
+  doc.text('Net Salary', 14, y); doc.text(money(p.netSalary), 160, y, {align:'right'});
+  doc.save(`Payslip_${(emp.name||'employee').replace(/\s+/g,'_')}_${p.month.replace(/\s+/g,'_')}.pdf`);
+}
+
+/* ============================================================
+   REPORTS
+   ============================================================ */
+function renderReports(){
+  const main = document.getElementById('main');
+  const months = [...new Set(state.payroll.map(p=>p.month))];
+  main.innerHTML = `
+    <div class="topbar">
+      <div><p class="page-eyebrow">Export</p><h1 class="page-title">Reports</h1></div>
+      <div class="actions">
+        <button class="btn btn-secondary" onclick="exportExcel()">Export Excel</button>
+        <button class="btn btn-accent" onclick="exportReportPDF()">Export PDF</button>
+      </div>
+    </div>
+    <div class="field" style="max-width:280px;">
+      <label>Filter by Month</label>
+      <select id="rep_month" onchange="renderReportTable()">
+        <option value="">All months</option>
+        ${months.map(m=>`<option>${m}</option>`).join('')}
+      </select>
+    </div>
+    <div id="rep_holder"></div>
+  `;
+  renderReportTable();
+}
+function reportRows(){
+  const month = document.getElementById('rep_month') ? document.getElementById('rep_month').value : '';
+  return state.payroll.filter(p=> !month || p.month===month);
+}
+function renderReportTable(){
+  const rows = reportRows();
+  document.getElementById('rep_holder').innerHTML = renderPayrollTableRows(rows.slice().reverse(), false);
+}
+function exportExcel(){
+  const rows = reportRows().map(p=>({
+    Employee: empName(p.employeeId), Month: p.month, 'Basic Salary': p.basicSalary,
+    'Advance Deduction': p.advanceDeduction, 'Leave Deduction': p.leaveDeduction,
+    Bonus: p.bonus, 'Other Deduction': p.otherDeduction, 'Net Salary': p.netSalary,
+    Status: p.paymentStatus, 'Payment Date': p.paymentDate||''
+  }));
+  if(rows.length===0){ alert('No payroll data to export.'); return; }
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Payroll Report');
+  XLSX.writeFile(wb, 'Salary_Report.xlsx');
+}
+function exportReportPDF(){
+  const rows = reportRows();
+  if(rows.length===0){ alert('No payroll data to export.'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({orientation:'landscape'});
+  doc.setFontSize(16); doc.setFont('helvetica','bold'); doc.text('Salary Report', 14, 16);
+  let y = 28;
+  doc.setFontSize(9); doc.setFont('helvetica','bold');
+  const headers = ['Employee','Month','Basic','Advance Ded.','Leave Ded.','Bonus','Other Ded.','Net Salary','Status'];
+  const colX = [14, 60, 95, 118, 145, 170, 195, 220, 250];
+  headers.forEach((h,i)=> doc.text(h, colX[i], y));
+  y += 6; doc.setLineWidth(0.3); doc.line(14, y-3, 280, y-3);
+  doc.setFont('helvetica','normal');
+  rows.forEach(p=>{
+    if(y>190){ doc.addPage({orientation:'landscape'}); y=20; }
+    const vals = [empName(p.employeeId), p.month, String(p.basicSalary), String(p.advanceDeduction), String(p.leaveDeduction), String(p.bonus), String(p.otherDeduction), String(p.netSalary), p.paymentStatus];
+    vals.forEach((v,i)=> doc.text(v.length>16?v.slice(0,16):v, colX[i], y));
+    y += 7;
+  });
+  doc.save('Salary_Report.pdf');
+}
+
+/* ============================================================
+   SETTINGS
+   ============================================================ */
+function renderSettings(){
+  const main = document.getElementById('main');
+  main.innerHTML = `
+    <div class="topbar">
+      <div><p class="page-eyebrow">Account</p><h1 class="page-title">Settings</h1></div>
+    </div>
+    <div class="table-wrap" style="padding:22px; max-width:420px;">
+      <p class="section-title" style="margin-top:0;">Change Admin Password</p>
+      <div class="field"><label>Current Username</label><input id="s_username" value="${escapeHtml(state.auth.username)}" /></div>
+      <div class="field"><label>New Password</label><input id="s_password" type="password" placeholder="Leave blank to keep current password" /></div>
+      <button class="btn btn-accent" onclick="saveSettings()">Save Changes</button>
+    </div>
+  `;
+}
+async function saveSettings(){
+  const username = document.getElementById('s_username').value.trim();
+  const password = document.getElementById('s_password').value;
+  if(!username){ alert('Username cannot be empty.'); return; }
+  state.auth.username = username;
+  if(password) state.auth.password = password;
+  await saveState();
+  document.getElementById('whoami').textContent = state.auth.username;
+  alert('Settings saved.');
+}
+
+/* ============================================================
+   MODAL HELPERS
+   ============================================================ */
+function openModal(title, bodyHtml, buttons){
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('modalBody').innerHTML = bodyHtml;
+  const foot = document.getElementById('modalFoot');
+  foot.innerHTML = '';
+  buttons.forEach(b=>{
+    const btn = document.createElement('button');
+    btn.className = 'btn ' + b.cls;
+    btn.textContent = b.label;
+    btn.onclick = b.onClick;
+    foot.appendChild(btn);
+  });
+  document.getElementById('modalBackdrop').classList.add('open');
+}
+function closeModal(){
+  document.getElementById('modalBackdrop').classList.remove('open');
+}
+document.getElementById('modalBackdrop').addEventListener('click', e=>{
+  if(e.target.id==='modalBackdrop') closeModal();
+});
+
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+(async function init(){
+  await loadState();
+})();
+</script>
+</body>
+</html>

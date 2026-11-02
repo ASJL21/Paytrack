@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Paytrack — Enterprise Salary & Payroll System</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- External Libraries for Charts and PDF/Excel Exports -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <!-- App Stylesheet -->
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ========================================== -->
+  <!-- TOAST NOTIFICATION CONTAINER               -->
+  <!-- ========================================== -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- ========================================== -->
+  <!-- LOGIN SCREEN                               -->
+  <!-- ========================================== -->
+  <div id="loginScreen" class="login-wrapper">
+    <div class="login-mesh-bg"></div>
+    <div class="login-container">
+      
+      <!-- Left Hero Banner -->
+      <div class="login-hero-side">
+        <div class="login-brand">
+          <div class="brand-logo-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          </div>
+          <span class="brand-name">Paytrack <span class="brand-badge">ENTERPRISE</span></span>
+        </div>
+        
+        <div class="hero-content">
+          <h1 class="hero-title">Next-Gen Salary & Payroll Engine</h1>
+          <p class="hero-subtitle">Automate complex salary calculations, track employee advances, compute leave deductions, and generate executive payslips with zero hassle.</p>
+          
+          <div class="hero-features-list">
+            <div class="hero-feature-item">
+              <div class="feat-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
+              <span>Automated advance reconciliation & leave deduction</span>
+            </div>
+            <div class="hero-feature-item">
+              <div class="feat-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
+              <span>Real-time payroll analytics & department dashboards</span>
+            </div>
+            <div class="hero-feature-item">
+              <div class="feat-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
+              <span>Instant 1-click payslips, Excel reports & PDF export</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="hero-formula-card">
+          <div class="formula-header">
+            <span class="formula-tag">ARITHMETIC ENGINE</span>
+            <span class="formula-badge">AUTO-SYNC</span>
+          </div>
+          <div class="formula-math">
+            <div class="f-row"><span>Basic Salary</span><span class="f-num">₹ 85,000</span></div>
+            <div class="f-row minus"><span>− Advance Repayment</span><span class="f-num">− ₹ 10,000</span></div>
+            <div class="f-row minus"><span>− Unpaid Leave (2 days)</span><span class="f-num">− ₹ 5,666</span></div>
+            <div class="f-row plus"><span>+ Performance Bonus</span><span class="f-num">+ ₹ 4,000</span></div>
+            <div class="f-row total"><span>Net Disbursal</span><span class="f-num total-val">₹ 73,334</span></div>
+          </div>
+        </div>
+
+        <div class="hero-footer-note">
+          <span>Enterprise Database: SQLite3 • Server: Node.js Express</span>
+        </div>
+      </div>
+
+      <!-- Right Login Card -->
+      <div class="login-form-side">
+        <div class="login-glass-card">
+          <div class="login-card-head">
+            <h2>Welcome Back</h2>
+            <p>Sign in to your administrative dashboard</p>
+          </div>
+
+          <form id="loginForm" onsubmit="event.preventDefault(); handleLogin();">
+            <div class="form-group">
+              <label for="loginUser">Username</label>
+              <div class="input-icon-wrap">
+                <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                <input id="loginUser" type="text" placeholder="admin" value="admin" required autocomplete="username" />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="loginPass">Password</label>
+              <div class="input-icon-wrap">
+                <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                <input id="loginPass" type="password" placeholder="••••••••" value="admin123" required autocomplete="current-password" />
+              </div>
+            </div>
+
+            <button type="submit" id="loginBtn" class="btn btn-primary btn-block btn-lg">
+              <span>Sign In to Dashboard</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            </button>
+          </form>
+
+          <div class="demo-credentials-box">
+            <div class="cred-title">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+              Quick Test Credentials
+            </div>
+            <div class="cred-body">
+              <span>User: <code>admin</code></span>
+              <span>Pass: <code>admin123</code></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MAIN APP SHELL                             -->
+  <!-- ========================================== -->
+  <div id="appShell" class="app-layout" style="display: none;">
+    
+    <!-- Sidebar Navigation -->
+    <aside class="app-sidebar" id="appSidebar">
+      <div class="sidebar-brand">
+        <div class="brand-logo-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        </div>
+        <div class="brand-text-group">
+          <span class="brand-title">Paytrack</span>
+          <span class="brand-subtitle">Salary Manager</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-section-label">CORE</div>
+        <ul class="nav-menu">
+          <li>
+            <button class="nav-btn active" data-page="dashboard">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+              <span>Dashboard</span>
+            </button>
+          </li>
+          <li>
+            <button class="nav-btn" data-page="employees">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              <span>Employees</span>
+              <span class="nav-badge" id="sidebarEmpCount">0</span>
+            </button>
+          </li>
+        </ul>
+
+        <div class="nav-section-label">PAYROLL & LEDGERS</div>
+        <ul class="nav-menu">
+          <li>
+            <button class="nav-btn" data-page="payroll">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+              <span>Payroll Runs</span>
+            </button>
+          </li>
+          <li>
+            <button class="nav-btn" data-page="advances">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+              <span>Advances</span>
+            </button>
+          </li>
+          <li>
+            <button class="nav-btn" data-page="leaves">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              <span>Leaves & Absences</span>
+            </button>
+          </li>
+          <li>
+            <button class="nav-btn" data-page="payslips">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+              <span>Payslips</span>
+            </button>
+          </li>
+        </ul>
+
+        <div class="nav-section-label">SYSTEM</div>
+        <ul class="nav-menu">
+          <li>
+            <button class="nav-btn" data-page="reports">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+              <span>Reports & Export</span>
+            </button>
+          </li>
+          <li>
+            <button class="nav-btn" data-page="logs">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+              <span>Audit Trail</span>
+            </button>
+          </li>
+          <li>
+            <button class="nav-btn" data-page="settings">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+              <span>Settings</span>
+            </button>
+          </li>
+        </ul>
+      </nav>
+
+      <!-- Sidebar User Profile Footer -->
+      <div class="sidebar-footer">
+        <div class="user-profile-chip">
+          <div class="user-avatar" id="sidebarUserAvatar">A</div>
+          <div class="user-meta">
+            <span class="user-name" id="sidebarUserName">Admin</span>
+            <span class="user-role" id="sidebarUserRole">Super Admin</span>
+          </div>
+          <button class="btn-icon-ghost" onclick="handleLogout()" title="Sign Out">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <div class="app-main-wrapper">
+      
+      <!-- Top Navigation Header -->
+      <header class="app-header">
+        <div class="header-left">
+          <button class="mobile-toggle-btn" onclick="toggleMobileSidebar()" aria-label="Toggle Sidebar">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          </button>
+          
+          <div class="header-breadcrumb">
+            <span class="breadcrumb-root">Paytrack</span>
+            <span class="breadcrumb-sep">/</span>
+            <span class="breadcrumb-current" id="headerPageTitle">Dashboard</span>
+          </div>
+        </div>
+
+        <div class="header-center">
+          <div class="global-search-bar">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="globalSearchInput" placeholder="Search employee, payslip, or advance... (Ctrl+K)" oninput="handleGlobalSearch(this.value)" />
+          </div>
+        </div>
+
+        <div class="header-right">
+          <!-- Quick Calculator Launcher -->
+          <button class="btn btn-secondary btn-sm" onclick="openQuickCalculatorModal()" title="Quick Salary Calculator">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="16" y1="14" x2="16" y2="18"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/></svg>
+            <span>Calculator</span>
+          </button>
+
+          <!-- New Payroll / Add Action -->
+          <button class="btn btn-accent btn-sm" onclick="openGenerateSalaryModal()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <span>Generate Salary</span>
+          </button>
+
+          <!-- Theme Switcher -->
+          <button class="theme-toggle-btn" onclick="toggleTheme()" id="themeToggleBtn" title="Toggle Dark/Light Mode">
+            <svg class="sun-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+            <svg class="moon-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- Dynamic Page View Container -->
+      <main class="page-content-area" id="pageContent">
+        <!-- Rendered dynamically by app.js -->
+      </main>
+
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- GLOBAL REUSABLE MODAL DIALOG               -->
+  <!-- ========================================== -->
+  <div class="modal-overlay" id="globalModalOverlay" style="display: none;">
+    <div class="modal-card" id="globalModalCard">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <h3 id="modalTitle">Modal Header</h3>
+          <p id="modalSubtitle" class="modal-sub"></p>
+        </div>
+        <button class="modal-close-btn" onclick="closeGlobalModal()" aria-label="Close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+      <div class="modal-footer" id="modalFooter"></div>
+    </div>
+  </div>
+
+  <!-- App Script -->
+  <script src="app.js"></script>
+</body>
+</html>

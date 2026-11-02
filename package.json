@@ -1,0 +1,21 @@
+{
+  "name": "paytrack-salary-management",
+  "version": "2.0.0",
+  "description": "Modern Full-Stack Salary & Payroll Management System",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node -e \"console.log('App ready')\""
+  },
+  "keywords": ["salary", "payroll", "management", "full-stack", "express", "sqlite"],
+  "author": "Paytrack Team",
+  "license": "ISC",
+  "dependencies": {
+    "better-sqlite3": "^11.8.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "morgan": "^1.10.0"
+  }
+}
